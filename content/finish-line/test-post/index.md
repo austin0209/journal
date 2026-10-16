@@ -4,6 +4,4 @@ draft: true
 title: 'Test Post'
 ---
 
-# Test
-
 This is a test. Is this working?
