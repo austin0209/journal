@@ -6,7 +6,7 @@ title: 'Codebase Intro, ECS, and Adding Items (Block 1, November 1-15)'
 
 ## The Codebase
 
-In the previous [intro post](/journal/finishline/20261031-intro), I mentioned I was reusing an existing codebase for a vampire survivors clone, codenamed "Kamps", I was trying to make in 2023.
+In the previous [intro post](/finish-line/20261031-intro), I mentioned I was reusing an existing codebase for a vampire survivors clone, codenamed "Kamps", I was trying to make in 2023.
 
 This has the advantage of me not having to start from scratch, however one disadvantage is that the purpose, and thus design decisions of that original project carry over to a new project with completely different goals in mind.
 
