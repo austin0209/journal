@@ -1,6 +1,6 @@
 ---
-date: '2026-11-10T23:16:41-05:00'
-draft: true
+date: '2026-11-11T23:16:41-05:00'
+draft: false
 title: 'Codebase Intro, ECS, and Adding Items (Block 1, November 1-15)'
 ---
 
@@ -123,3 +123,98 @@ I essentially just need to provide a blueprint of what state the entity contains
 Full disclaimer, I am a fan of languages Clojure for it's data-first design, so this does naturally align with my preference for reasoning about code. As great as I make it sound here, of course like anything ECS isn't a one size fit all solution. In practice, it is harder to reason about compared to usual node-based or OOP approaches, especially for smaller projects. And the performance benefit is probably negligible for most game genres. 
 
 ## Adding items
+
+The goal for this block was to add a concept of items to my game.
+
+Items will be the main building blocks of the game, so this was naturally a good first goal.
+
+Ironically, after praising ECS so much, in order to add items, I decided implement everything outside of the ECS. Like I said earlier, not all problems are easiest to reason about with an ECS.
+
+The reason I decided to implement items outside of ECS-land is because these items more or less will have very specific behavior, and won't necessarily share behavior. The only shared behavior would be the way the game invokes/uses the weapons. Each weapon would be invoked at a specific cadence or frequency, but could possibly interact with the world in drastically different ways. One weapon could fire projectiles in a straight line, one could fire heat seeking projectiles, some could just cause status effects. If I were to implement this in ECS-land I would have to make specialized components and systems for each particular behavior. Also, the game won't have large amounts of weapons in the world compared to something like bullets. Therefore, the performance benefit doesn't exist. For these reasons, I felt a simple class hierarchy was easier to work with. Here's a mermaid chart of what I ended up with:
+
+```mermaid
+classDiagram
+  class C1["Weapon"] {
+    +World world
+    +Entity owner
+    +Float attackFrequency
+    +Float attackRange
+    +Float projectileSpeed
+    +use()*
+    +update()
+  }
+  class C2["SingleProjectileWeapon"] {
+    +use()*
+  }
+  C1 <|-- C2 : extends
+  class C3["ShotgunWeapon"] {
+    +use()*
+  }
+  C1 <|-- C3 : extends
+  class C4["BurstWeapon"] {
+    +use()*
+  }
+  C1 <|-- C4 : extends
+```
+
+I started with 3 types of simple weapons I had in mind:
+- A single projectile weapon which shoots a single stream bullets straight to an enemy.
+- A shotgun weapon which shoots a spread of bullets at an enemy.
+- A 'burst' weapons which shoots bullets in all directions around the player at once.
+
+Of course, I want my final game to have a lot more weapons that work in completely different ways outside of shooting basic projectiles. However, I think this is a good starting point for now.
+
+The implementation is pretty simple for now. The update function of the base Weapon class is just a timer which invokes the weapon based on the attackFrequency set:
+
+```kotlin
+// Weapon base class
+fun update() {
+    this.timeElapsed += world.deltaTime
+    if (this.timeElapsed > this.attackFrequency) {
+        this.use()
+        this.timeElapsed = 0f
+    }
+}
+```
+
+Then, the player class holds a list of equipped weapons:
+```kotlin
+data class CPlayer(
+    var moveSpeed: Float = DEFAULT_MOVE_SPEED,
+) : Component<CPlayer> {
+    val weapons = mutableListOf<Weapon>()
+
+    override fun type() = CPlayer
+
+    companion object : ComponentType<CPlayer>() {
+        const val DEFAULT_MOVE_SPEED = 200f
+    }
+}
+```
+
+Each weapon in the list is updated on every tick. Within each weapon subclass, I can spawn entities by calling `World.entity` from Fleks' `World` object which essentially manages the state of the game. Within each weapon's `use` function, I can basically just call the `spawnBullets` function shown above with some additional logic on top. I ended up taking advantage of Kotlin having higher order function support:
+
+```kotlin
+// SingleProjectileWeapon
+override fun use() {
+  bulletsTowardsNearestEntity(::spawnBullet)
+}   
+// ShotgunWeapon
+override fun use() {
+  bulletsTowardsNearestEntity(::spawnShotgunBullets)
+}
+```
+
+`bulletsTowardsNearestEntity` is just a utility function which spawns bullets towards the nearest entity to the caller using the passed in function.
+
+After all this, I am now able to have 3 weapons!
+
+![](multiweapons.png)
+
+The 3 red circles are the different ranges, and the 3 different colors are projectiles from different weapons.
+
+## Outro and Next Goal
+
+This first block was pretty straightforward. I probably spent more time on this blog post than the actual code, but I think it's a good start.
+
+For next weeks goal, I'll continue with the weapons theme and add stats and modifiers to the existing weapons. As a stretch goal, I also want to try to add some sort of shop somewhere to buy weapons.
